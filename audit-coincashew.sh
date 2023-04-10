@@ -313,7 +313,7 @@ elif [ "$NODEMODE" == "RELAY" ] ; then
                 if [[ "$(awk -F ":" '/"publicRoots"/ {print $2}' $TOPOLOGY)" == *"[]"* ]] ; then
                     echo -e " [\e[1;31mKO\e[0m] publicRoots block seems empty. Your Relay need to advertise to a Public Root"
                 else
-                    PUBLICROOT=$(awk '/publicRoots/ {n = 10} n {print prev;} {prev = $0} END {if (n) print}' $NODE_HOME/topology-test-relay.json)
+                    PUBLICROOT=$(awk '/publicRoots/ {n = 10} n {print prev;} {prev = $0} END {if (n) print}' $TOPOLOGY)
                         if [[ "$PUBLICROOT" == *'"relays-new.cardano-mainnet.iohk.io"'* ]] ; then
                             echo -e " [\e[1;32mOK\e[0m] PublicRoots is set to relays-new.cardano-mainnet.iohk.io (good practice) "
                         else
