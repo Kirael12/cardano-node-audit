@@ -16,13 +16,13 @@ It runs the following checks :
 - key services running
 - Firewalling rules extract
 
-Pre-Requisites :
+# Pre-Requisites :
 
 Cardano Node setup with Coincashew Guide : https://www.coincashew.com/coins/overview-ada/guide-how-to-build-a-haskell-stakepool-node)
 
 # How to use
 
-The script must be ran with sudo an -E flag
+The script must be ran with sudo an -E flag (to include env variables)
 
 ```shell
 sudo -E ./audit-coincashew.sh
