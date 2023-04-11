@@ -18,7 +18,7 @@ It runs the following checks :
 
 ![Capture d’écran 2023-04-10 à 20 40 11](https://user-images.githubusercontent.com/113426048/231139235-a2969e14-1e80-4f16-936c-92b7afeb339e.png)
 
-![Capture d’écran 2023-04-10 à 20 40 28](https://user-images.githubusercontent.com/113426048/231139600-d589fc66-64f7-4ca2-b72b-f9c238accf2f.png)
+![Capture d’écran 2023-04-10 à 20 40 28](https://user-images.githubusercontent.com/113426048/231141468-f25c790a-a76c-4fd6-bc3a-955a5ed03f8c.png)
 
 # Pre-Requisites :
 
