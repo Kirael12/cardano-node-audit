@@ -16,6 +16,10 @@ It runs the following checks :
 - key services running
 - Firewalling rules extract
 
+![Capture d’écran 2023-04-10 à 20 40 11](https://user-images.githubusercontent.com/113426048/231139235-a2969e14-1e80-4f16-936c-92b7afeb339e.png)
+
+![Capture d’écran 2023-04-10 à 20 40 28](https://user-images.githubusercontent.com/113426048/231139600-d589fc66-64f7-4ca2-b72b-f9c238accf2f.png)
+
 # Pre-Requisites :
 
 Cardano Node setup with Coincashew Guide : https://www.coincashew.com/coins/overview-ada/guide-how-to-build-a-haskell-stakepool-node)
