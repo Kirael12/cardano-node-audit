@@ -21,6 +21,7 @@ echo " |  _| (_) | |    | (_| (_) | | | | | (_| (_| \__ \ | | |  __/\ V  V / ";
 echo " |_|  \___/|_|     \___\___/|_|_| |_|\___\__,_|___/_| |_|\___| \_/\_/  ";
 echo "                                                                       ";
 echo
+echo "v1.0.1" 
 echo "by FRADA stake pool"
 echo
 echo "#########################################################################"
@@ -122,15 +123,15 @@ if [ -f "$SERVICE" ] ; then
             echo -e " [\e[1;32mOK\e[0m] Cardano node topology file :        "$TOPOLOGY
         else
             echo -e " [\e[1;31mKO\e[0m] Cardano node topology file not found !! Script won't work correctly !!"
-            STARTCARDANO="null"
-            SERVICE="null"
-            PORT="null"
-            HOSTADDR="null"
-            CONFIG="null"
             TOPOLOGY="null"
         fi
     else
         echo -e " [\e[1;31mKO\e[0m] Could not find Cardano starting script inside Systemd service file"
+        STARTCARDANO="null"
+        PORT="null"
+        HOSTADDR="null"
+        CONFIG="null"
+        TOPOLOGY="null"
     fi
 else
     echo -e " [\e[1;31mKO\e[0m] Could not find systemd service file for Cardano. !! Script won't work correctly !!"
@@ -177,7 +178,7 @@ else
 fi
 sleep 1
 
-####################################### BLOCK PRODUCER CHECKS #######################################
+####################################### BLOCK PRODUCER CHECK #######################################
 
 if [ "$NODEMODE" == "BP" ] ; then
     echo
@@ -287,7 +288,7 @@ if [ "$NODEMODE" == "BP" ] ; then
     --op-cert-file $NODE_HOME/node.cert
     echo
 
-####################################### RELAY CHECKS #######################################
+####################################### RELAY CHECK #######################################
 
 elif [ "$NODEMODE" == "RELAY" ] ; then
     echo
@@ -385,6 +386,8 @@ elif [ "$NODEMODE" == "RELAY" ] ; then
         echo -e " [\e[1;32mOK\e[0m] node.skey not found on the server (good practice)"        
     fi
 fi
+
+####################################### SYSTEM AND SECURITY CHECK #######################################
 
 echo
 echo "#########################################################################"
