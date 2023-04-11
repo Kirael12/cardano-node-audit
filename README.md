@@ -32,6 +32,16 @@ The script must be ran with sudo an -E flag (to include env variables)
 sudo -E ./audit-coincashew.sh
 ```
 
+# Changelog
+
+v1.0.1
+
+Minor bug corrections
+
+v1.0.0
+
+Initial release
+
 # Future improvements
 
 - KES rotation calculation and warning
