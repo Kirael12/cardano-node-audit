@@ -233,33 +233,35 @@ if [ "$NODEMODE" == "BP" ] ; then
     echo "---------------------------------------------------------------------"
     echo
     sleep 1
+        sudo -E -u kirael bash -c '
         if [ -s "$NODE_HOME/kes.skey" ] && [ -r "$NODE_HOME/kes.skey" ] ; then
             if [ ! -w "$NODE_HOME/kes.skey" ] && [ ! -x "$NODE_HOME/kes.skey" ] ; then
-                echo -e " [\e[1;32mOK\e[0m] kes.skey exists with right permissions (400)."
-            else
-                echo -e " [\e[1;33mWARNING\e[0m] kes.skey exists with wrong permissions. You should chmod 400 kes.skey"
-            fi
-        else
-            echo -e " [\e[0;31mKO\e[0m] kes.skey not found on your Cardano Home"
+                printf " [\033[1;32mOK\033[0m] kes.skey exists with right permissions (400).\n";
+            else 
+                printf " [\033[1;33mWARNING\033[0m] kes.skey exists with wrong permissions. You should chmod 400 kes.skey\n";
+            fi;
+        else 
+            printf " [\033[0;31mKO\033[0m] kes.skey not found on your Cardano Home\n";
         fi
         if [ -s "$NODE_HOME/vrf.skey" ] && [ -r "$NODE_HOME/vrf.skey" ] ; then
             if [ ! -w "$NODE_HOME/vrf.skey" ] && [ ! -x "$NODE_HOME/vrf.skey" ] ; then
-                echo -e " [\e[1;32mOK\e[0m] vrf.skey exists with right permissions (400)."
-            else
-                echo -e " [\e[1;33mWARNING\e[0m] vrf.skey exists with wrong permissions. You should chmod 400 vrf.skey"
-            fi
-        else
-            echo -e " [\e[0;31mKO\e[0m] vrf.skey not found in your Cardano Home"
+                printf " [\033[1;32mOK\033[0m] vrf.skey exists with right permissions (400).\n";
+            else 
+                printf " [\033[1;33mWARNING\033[0m] vrf.skey exists with wrong permissions. You should chmod 400 vrf.skey\n";
+            fi;
+        else 
+            printf " [\033[0;31mKO\033[0m] vrf.skey not found on your Cardano Home\n";
         fi
+        
         if [ -s "$NODE_HOME/node.cert" ] && [ -r "$NODE_HOME/node.cert" ] ; then
             if [ ! -w "$NODE_HOME/node.cert" ] && [ ! -x "$NODE_HOME/node.cert" ] ; then
-                echo -e " [\e[1;32mOK\e[0m] node.cert exists with right permissions (400)."
-            else
-                echo -e " [\e[1;33mWARNING\e[0m] node.cert exists with wrong permissions. You should chmod 400 node.cert"
-            fi
-        else
-            echo -e " [\e[0;31mKO\e[0m] node.cert not found in your Cardano Home"
-        fi
+                printf " [\033[1;32mOK\033[0m] node.cert exists with right permissions (400).\n";
+            else 
+                printf " [\033[1;33mWARNING\033[0m] node.cert exists with wrong permissions. You should chmod 400 node.cert\n";
+            fi;
+        else 
+            printf " [\033[0;31mKO\033[0m] node.cert not found on your Cardano Home\n";
+        fi'
     echo
     FINDTEST=$(find / -path /proc -prune -o -type f -name "node.vkey" -printf '%p\n')
         if [ -n "$FINDTEST" ]; then
