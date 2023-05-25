@@ -34,9 +34,13 @@ sudo -E ./audit-coincashew.sh
 
 # Changelog
 
+v1.0.2
+
+- KES files permission check update
+
 v1.0.1
 
-Minor bug corrections
+- Minor bug corrections
 
 v1.0.0
 
