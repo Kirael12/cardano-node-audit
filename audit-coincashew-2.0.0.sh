@@ -434,7 +434,6 @@ elif [ "$NODEMODE" == "RELAY" ] ; then
     else
         echo -e " [\e[1;32mOK\e[0m] node.skey not found on the server (good practice)"        
     fi
-fi
 
 ####################################### NOT A CARDANO NODE #######################################
 
@@ -444,7 +443,7 @@ else
     echo " Cardano configuration could not be found. Skipping Cardano tests"
     echo "---------------------------------------------------------------------"
     sleep 1
-
+fi
 
 ####################################### SYSTEM AND SECURITY CHECK #######################################
 
