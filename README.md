@@ -13,8 +13,10 @@ It runs the following checks :
 - Keys
 - SSHD hardening
 - Null passwords check
-- key services running
+- Important services running
 - Firewalling rules extract
+- KES expiry and rotation alert
+- sysctl.conf hardening check
 
 ![Capture d’écran 2023-04-10 à 20 40 11](https://user-images.githubusercontent.com/113426048/231139235-a2969e14-1e80-4f16-936c-92b7afeb339e.png)
 
@@ -34,6 +36,13 @@ sudo -E ./audit-coincashew.sh
 
 # Changelog
 
+v2.0.0
+
+- Improved Cardano config parsing accuracy
+- Improved KES files detection and checks
+- Added KES expirty calculation and alerts
+- Added sysctl hardening check
+
 v1.0.2
 
 - KES files permission check update
@@ -48,5 +57,4 @@ Initial release
 
 # Future improvements
 
-- KES rotation calculation and warning
-- /etc/sysctl.conf hardening
+- Adapt the script to run on different setups (not only coincashew)
