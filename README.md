@@ -41,6 +41,10 @@ sudo -E ./audit-coincashew.sh
 
 # Changelog
 
+v2.0.1
+
+- Minor bug correction
+
 v2.0.0
 
 - Improved Cardano config parsing accuracy
