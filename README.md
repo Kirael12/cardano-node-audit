@@ -22,6 +22,11 @@ It runs the following checks :
 
 ![Capture d’écran 2023-04-10 à 20 40 28](https://user-images.githubusercontent.com/113426048/231141468-f25c790a-a76c-4fd6-bc3a-955a5ed03f8c.png)
 
+![Capture d’écran 2023-06-06 à 13 51 31](https://github.com/Kirael12/Cardano-Audit-Coincashew/assets/113426048/37dbad9c-4730-4cad-ba3a-47937c76e7ca)
+
+![Capture d’écran 2023-06-06 à 13 52 22](https://github.com/Kirael12/Cardano-Audit-Coincashew/assets/113426048/07da0ad8-08e9-4780-ab8a-66898e1a4f19)
+
+
 # Pre-Requisites :
 
 Cardano Node setup with Coincashew Guide : https://www.coincashew.com/coins/overview-ada/guide-how-to-build-a-haskell-stakepool-node)
