@@ -21,7 +21,7 @@ echo " |  _| (_) | |    | (_| (_) | | | | | (_| (_| \__ \ | | |  __/\ V  V / ";
 echo " |_|  \___/|_|     \___\___/|_|_| |_|\___\__,_|___/_| |_|\___| \_/\_/  ";
 echo "                                                                       ";
 echo
-echo "v1.0.2" 
+echo "v2.0.0" 
 echo "by FRADA stake pool"
 echo
 echo "#########################################################################"
@@ -97,6 +97,9 @@ if [ -f "$SERVICE" ] ; then
         TOPOLOGY_LINE=$(grep "TOPOLOGY=" "$STARTCARDANO")
         DB_PATH_LINE=$(grep "DB_PATH=" "$STARTCARDANO")
         SOCKET_PATH_LINE=$(grep "SOCKET_PATH=" "$STARTCARDANO")
+        KES_LINE=$(grep "KES=" "$STARTCARDANO")
+        VRF_LINE=$(grep "VRF=" "$STARTCARDANO")
+        CERT_LINE=$(grep "CERT=" "$STARTCARDANO")
         if [ ! -z "$PORT_LINE" ] ; then
             PORT=$(echo "$PORT_LINE" | cut -d= -f2)
             echo -e " [\e[1;32mOK\e[0m] Cardano node listening port :       "$PORT
@@ -125,6 +128,27 @@ if [ -f "$SERVICE" ] ; then
             echo -e " [\e[1;31mKO\e[0m] Cardano node topology file not found !! Script won't work correctly !!"
             TOPOLOGY="null"
         fi
+        if [ ! -z "$KES_LINE" ] ; then
+            KES=$(echo "$KES_LINE" | cut -d= -f2)
+            echo -e " [\e[1;32mOK\e[0m] KES file :                          "$KES
+        else
+            echo -e " [\e[1;33mWARNING\e[0m] Cardano node KES file not found ! It may be normal if your node is a RELAY"
+            KES="null"
+        fi
+        if [ ! -z "$VRF_LINE" ] ; then
+            VRF=$(echo "$VRF_LINE" | cut -d= -f2)
+            echo -e " [\e[1;32mOK\e[0m] VRF file :                          "$VRF
+        else
+            echo -e " [\e[1;33mWARNING\e[0m] Cardano node VRF file not found ! It may be normal if your node is a RELAY"
+            VRF="null"
+        fi
+        if [ ! -z "$CERT_LINE" ] ; then
+            CERT=$(echo "$CERT_LINE" | cut -d= -f2)
+            echo -e " [\e[1;32mOK\e[0m] CERT file :                         "$CERT
+        else
+            echo -e " [\e[1;33mWARNING\e[0m] Cardano node CERT file not found ! It may be normal if your node is a RELAY"
+            CERT="null"
+        fi
     else
         echo -e " [\e[1;31mKO\e[0m] Could not find Cardano starting script inside Systemd service file"
         STARTCARDANO="null"
@@ -132,6 +156,9 @@ if [ -f "$SERVICE" ] ; then
         HOSTADDR="null"
         CONFIG="null"
         TOPOLOGY="null"
+        KES="null"
+        VRF="null"
+        CERT="null"
     fi
 else
     echo -e " [\e[1;31mKO\e[0m] Could not find systemd service file for Cardano. !! Script won't work correctly !!"
@@ -141,6 +168,9 @@ else
     HOSTADDR="null"
     CONFIG="null"
     TOPOLOGY="null"
+    KES="null"
+    VRF="null"
+    CERT="null"
 fi
 echo
 echo "#########################################################################"
@@ -164,7 +194,7 @@ else
     if [ -f "$NODE_HOME/topology.json" ] ; then
         if [ "$(grep -i "relays-new.cardano-mainnet.iohk.io" $NODE_HOME/topology.json | grep -v "#")" == "" ] && [ -f "$NODE_HOME/node.cert" ] ; then
             echo -e " YOUR NODE SEEMS TO BE RUNNING AS A \e[1;32mBLOCK PRODUCER\e[0m"
-            echo -e " (topology.json found with 'relays-new.cardano-mainnet.iohk.io' inside + and node.cert file found)"
+            echo -e " (topology.json found without 'relays-new.cardano-mainnet.iohk.io' inside + and node.cert file found)"
             NODEMODE="BP"
         else
             echo -e " YOUR NODE SEEMS TO BE RUNNING AS A \e[1;32mRELAY\e[0m"
@@ -172,7 +202,6 @@ else
         fi
     else
         echo -e " [\e[1;31mKO\e[0m] Still unable to determine if your node is a Relay or a Block Producer"
-        echo -e "      Script will skip several audit checks"
         NODEMODE="NA"
     fi
 fi
@@ -233,36 +262,37 @@ if [ "$NODEMODE" == "BP" ] ; then
     echo "---------------------------------------------------------------------"
     echo
     sleep 1
-        sudo -E -u kirael bash -c '
-        if [ -s "$NODE_HOME/kes.skey" ] && [ -r "$NODE_HOME/kes.skey" ] ; then
-            if [ ! -w "$NODE_HOME/kes.skey" ] && [ ! -x "$NODE_HOME/kes.skey" ] ; then
+        if [ -f "$(echo $KES)" ] ; then
+            PERMISSIONS_KES=$(stat -c "%a" $KES)
+            if [ "$PERMISSIONS_KES" = 400 ] ; then
                 printf " [\033[1;32mOK\033[0m] kes.skey exists with right permissions (400).\n";
-            else 
+            else
                 printf " [\033[1;33mWARNING\033[0m] kes.skey exists with wrong permissions. You should chmod 400 kes.skey\n";
-            fi;
+            fi
         else 
             printf " [\033[0;31mKO\033[0m] kes.skey not found on your Cardano Home\n";
         fi
-        if [ -s "$NODE_HOME/vrf.skey" ] && [ -r "$NODE_HOME/vrf.skey" ] ; then
-            if [ ! -w "$NODE_HOME/vrf.skey" ] && [ ! -x "$NODE_HOME/vrf.skey" ] ; then
+        if [ -f "$(echo $VRF)" ] ; then
+            PERMISSIONS_VRF=$(stat -c "%a" $VRF)
+            if [ "$PERMISSIONS_VRF" = 400 ] ; then
                 printf " [\033[1;32mOK\033[0m] vrf.skey exists with right permissions (400).\n";
-            else 
+            else
                 printf " [\033[1;33mWARNING\033[0m] vrf.skey exists with wrong permissions. You should chmod 400 vrf.skey\n";
-            fi;
+            fi
         else 
             printf " [\033[0;31mKO\033[0m] vrf.skey not found on your Cardano Home\n";
         fi
-        
-        if [ -s "$NODE_HOME/node.cert" ] && [ -r "$NODE_HOME/node.cert" ] ; then
-            if [ ! -w "$NODE_HOME/node.cert" ] && [ ! -x "$NODE_HOME/node.cert" ] ; then
+        if [ -f "$(echo $CERT)" ] ; then
+            PERMISSIONS_CERT=$(stat -c "%a" $CERT)
+            if [ "$PERMISSIONS_CERT" = 400 ] ; then
                 printf " [\033[1;32mOK\033[0m] node.cert exists with right permissions (400).\n";
-            else 
+            else
                 printf " [\033[1;33mWARNING\033[0m] node.cert exists with wrong permissions. You should chmod 400 node.cert\n";
-            fi;
+            fi
         else 
             printf " [\033[0;31mKO\033[0m] node.cert not found on your Cardano Home\n";
-        fi'
-    echo
+        fi
+        echo
     FINDTEST=$(find / -path /proc -prune -o -type f -name "node.vkey" -printf '%p\n')
         if [ -n "$FINDTEST" ]; then
             echo -e " \e[1;31mDANGER : node.vkey found.  $FINDTEST"
@@ -288,6 +318,23 @@ if [ "$NODEMODE" == "BP" ] ; then
     sleep 1
     cardano-cli query kes-period-info --mainnet  \
     --op-cert-file $NODE_HOME/node.cert
+    echo
+    KES_PERIOD_OUTPUT=$(cardano-cli query kes-period-info --mainnet --op-cert-file $CERT)
+    EXPIRY_DATE=$(echo $KES_PERIOD_OUTPUT | grep -oP '"qKesKesKeyExpiry": "\K[^"]+')
+    EXPIRY_TIMESTAMP=$(date -d "$EXPIRY_DATE" +%s)
+    CURRENT_TIMESTAMP=$(date +%s)
+    SECONDS_REMAINING=$((EXPIRY_TIMESTAMP - CURRENT_TIMESTAMP))
+    DAYS_REMAINING=$((SECONDS_REMAINING / 86400))
+    if [[ $DAYS_REMAINING -lt 1 ]]; then
+        echo -e " \e[1;31mDANGER : KES key is about to expire in 1 day or has already expired !"
+        echo -e " You must rotate your KES keys or your Cardano Node won't be able to validate blocks\e[0m"
+    elif [[ $DAYS_REMAINING -lt 8 && $DAYS_REMAINING -gt 1 ]]; then
+        echo -e " [\033[1;33mWARNING\033[0m] Remaining days before KES key expires : "$DAYS_REMAINING
+    elif [[ $DAYS_REMAINING -lt 16 ]]; then
+        echo -e " [\033[1;33mWARNING\033[0m] Remaining days before KES key expires : "$DAYS_REMAINING
+    else
+        echo -e " [\033[1;32mOK\033[0m] KES Key valid. Remaining days before expiry : "$DAYS_REMAINING
+    fi
     echo
 
 ####################################### RELAY CHECK #######################################
@@ -388,6 +435,16 @@ elif [ "$NODEMODE" == "RELAY" ] ; then
         echo -e " [\e[1;32mOK\e[0m] node.skey not found on the server (good practice)"        
     fi
 fi
+
+####################################### NOT A CARDANO NODE #######################################
+
+else
+    echo
+    echo "---------------------------------------------------------------------"
+    echo " Cardano configuration could not be found. Skipping Cardano tests"
+    echo "---------------------------------------------------------------------"
+    sleep 1
+
 
 ####################################### SYSTEM AND SECURITY CHECK #######################################
 
@@ -533,6 +590,195 @@ echo "=========================================="
 echo
 echo " --> This iptables extract includes every rules that have been manually added with UFW, or by Fail2ban"
 echo
+echo
+echo "#########################################################################"
+echo
+echo -e "\e[0;33m 8. /etc/sysctl.conf HARDENING/////// \e[0m"
+echo
+sleep 1
+echo -e " \e[0;33m### Avoid smurf attacks\e[0m"
+echo
+expected_value="1"
+if grep -qE "^net.ipv4.icmp_echo_ignore_broadcasts\s*=\s*$expected_value" /etc/sysctl.conf ; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.icmp_echo_ignore_broadcasts = 1"
+else
+    if grep -qE "^net.ipv4.icmp_echo_ignore_broadcasts" /etc/sysctl.conf ; then
+        current_value=$(grep -E "^net.ipv4.icmp_echo_ignore_broadcasts" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.icmp_echo_ignore_broadcasts = "$current_value " Expected value : "$expected_value
+    else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.icmp_echo_ignore_broadcasts = 1"
+    fi
+fi
+sleep 1
+echo
+echo -e " \e[0;33m### Bad ICMP error messages protection\e[0m"
+echo
+expected_value="1"
+if grep -qE "^net.ipv4.icmp_ignore_bogus_error_responses\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.icmp_ignore_bogus_error_responses = 1"
+else
+    if grep -qE "^net.ipv4.icmp_ignore_bogus_error_responses" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.icmp_ignore_bogus_error_responses" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.icmp_ignore_bogus_error_responses = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.icmp_ignore_bogus_error_responses = 1"
+    fi
+fi
+sleep 1
+echo
+echo -e " \e[0;33m### SYN flood attack protection\e[0m"
+echo
+expected_value="1"
+if grep -qE "^net.ipv4.tcp_syncookies\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.tcp_syncookies = 1"
+else
+    if grep -qE "^net.ipv4.tcp_syncookies" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.tcp_syncookies" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.tcp_syncookies = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.tcp_syncookies = 1"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Disable Redirects\e[0m"
+echo
+expected_value="0"
+if grep -qE "^net.ipv4.conf.all.accept_redirects\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.all.accept_redirects = 0"
+else
+    if grep -qE "^net.ipv4.conf.all.accept_redirects" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.all.accept_redirects" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.all.accept_redirects = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.all.accept_redirects = 0"
+    fi
+fi
+if grep -qE "^net.ipv4.conf.default.accept_redirects\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.default.accept_redirects = 0"
+else
+    if grep -qE "^net.ipv4.conf.default.accept_redirects" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.default.accept_redirects" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.default.accept_redirects = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.default.accept_redirects = 0"
+    fi
+fi
+if grep -qE "^net.ipv4.conf.all.secure_redirects\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.all.secure_redirects = 0"
+else
+    if grep -qE "^net.ipv4.conf.all.secure_redirects" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.all.secure_redirects" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.all.secure_redirects = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.all.secure_redirects = 0"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Disable packet forwarding\e[0m"
+echo
+expected_value="0"
+if grep -qE "^net.ipv4.ip_forward\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.ip_forward = 0"
+else
+    if grep -qE "^net.ipv4.ip_forward" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.ip_forward" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.ip_forward = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.ip_forward = 0"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Synflood protection\e[0m"
+echo
+expected_value="5"
+if grep -qE "^net.ipv4.tcp_synack_retries\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.tcp_synack_retries = 5"
+else
+    if grep -qE "^net.ipv4.tcp_synack_retries" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.tcp_synack_retries" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.tcp_synack_retries = "$current_value " A fine value would be : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.tcp_synack_retries = 5"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Refuse source routed packets\e[0m"
+echo
+expected_value="0"
+if grep -qE "^net.ipv4.conf.all.accept_source_route\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.all.accept_source_route = 0"
+else
+    if grep -qE "^net.ipv4.conf.all.accept_source_route" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.all.accept_source_route" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.all.accept_source_route = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.all.accept_source_route = 0"
+    fi
+fi
+if grep -qE "^net.ipv4.conf.default.accept_source_route\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.default.accept_source_route = 0"
+else
+    if grep -qE "^net.ipv4.conf.default.accept_source_route" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.default.accept_source_route" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.default.accept_source_route = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.default.accept_source_route = 0"
+    fi
+fi
+sleep 1
+echo
+echo -e " \e[0;33m### Log spoofed, source routed, and redirect packets\e[0m"
+echo
+expected_value="1"
+if grep -qE "^net.ipv4.conf.all.log_martians\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.all.log_martians = 1"
+else
+    if grep -qE "^net.ipv4.conf.all.log_martians" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.all.log_martians" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.all.log_martians = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.all.log_martians = 1"
+    fi
+fi
+if grep -qE "^net.ipv4.conf.default.log_martians\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.default.log_martians = 1"
+else
+    if grep -qE "^net.ipv4.conf.default.log_martians" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.default.log_martians" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.default.log_martians = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.default.log_martians = 1"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Increase TCP max buffer size\e[0m"
+echo
+expected_value="4096 87380 8388608"
+if grep -qE "^net.ipv4.tcp_rmem\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.tcp_rmem = 4096 87380 8388608"
+else
+    if grep -qE "^net.ipv4.tcp_rmem" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.tcp_rmem" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.tcp_rmem = "$current_value " A fine value would be : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.tcp_rmem = "$expected_value
+    fi
+fi
+if grep -qE "^net.ipv4.tcp_wmem\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.tcp_wmem = 4096 87380 8388608"
+else
+    if grep -qE "^net.ipv4.tcp_wmem" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.tcp_wmem" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.tcp_wmem = "$current_value " A fine value would be : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.tcp_wmem = "$expected_value
+    fi
+fi
 echo
 echo "#########################################################################"
 echo
