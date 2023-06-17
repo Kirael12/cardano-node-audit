@@ -28,10 +28,10 @@ echo "#########################################################################"
 echo "Audit script for your cardano node installation with Coincashew guide"
 echo "#########################################################################"
 echo
-echo "This script will collect and analyse info about your Cardano Node."
+echo "This script will collect and analyze info about your Cardano Node."
 echo "It can help you harden your security, and check if your node configuration"
 echo "is correct. It is designed for a Coincashew installation, but could be"
-echo "modify to suit other setups."
+echo "modified to suit other setups."
 echo 
 echo "Tested for Ubuntu 22.04.2 LTS"
 echo
@@ -393,7 +393,7 @@ elif [ "$NODEMODE" == "RELAY" ] ; then
                     TOPOLOGYCRONJOB=$(grep -r -l -w topologyUpdater /var/spool/cron/crontabs/* 2>/dev/null)
                         if [[ -n "$TOPOLOGYCRONJOB" ]]; then
                             echo -e " [\e[1;32mOK\e[0m] A cron job has been found for Topology Updater. Make sure it runs every hour."
-                            TOPOLOGYLOGS=$(tail -5 /home/kirael/cardano-my-node/logs/topologyUpdater_lastresult.json | grep -v 204)
+                            TOPOLOGYLOGS=$(tail -5 $HOME/cardano-my-node/logs/topologyUpdater_lastresult.json | grep -v 204)
                                 if [[ -z "$TOPOLOGYLOGS" ]]; then
                                     echo -e " [\e[1;32mOK\e[0m] Last 5 log lines results for Topology Updater are OK."
                                 else
