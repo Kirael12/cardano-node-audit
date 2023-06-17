@@ -4,7 +4,7 @@ These script audits Cardano Node setup with Coincashew guide.
 
 It runs the following checks :
 
-- Environnement Variables
+- Environment Variables
 - Systemd cardano-node file verification and parsing
 - Cardano startup script verification and parsing
 - Node operation mode (Block Producer ? Relay ?)
@@ -49,7 +49,7 @@ v2.0.0
 
 - Improved Cardano config parsing accuracy
 - Improved KES files detection and checks
-- Added KES expirty calculation and alerts
+- Added KES expiry calculation and alerts
 - Added sysctl hardening check
 
 v1.0.2
