@@ -21,22 +21,28 @@ echo " |  _| (_) | |    | (_| (_) | | | | | (_| (_| \__ \ | | |  __/\ V  V / ";
 echo " |_|  \___/|_|     \___\___/|_|_| |_|\___\__,_|___/_| |_|\___| \_/\_/  ";
 echo "                                                                       ";
 echo
-echo "v2.0.1" 
+echo "v3.0.0" 
 echo "by FRADA stake pool"
 echo
 echo "#########################################################################"
-echo "Audit script for your cardano node installation with Coincashew guide"
+echo "Audit script for your cardano node installation"
 echo "#########################################################################"
 echo
 echo "This script will collect and analyze info about your Cardano Node."
 echo "It can help you harden your security, and check if your node configuration"
-echo "is correct. It is designed for a Coincashew installation, but could be"
-echo "modified to suit other setups."
+echo "is correct. It is designed for a Coincashew installation, but can be used"
+echo "on other setups, for security checks only."
 echo 
 echo "Tested for Ubuntu 22.04.2 LTS"
 echo
 echo "#########################################################################"
 echo
+echo "Is it a Coincashew Cardano node setup ? y/n"
+VALID_ANSWER=false
+while [[ $VALID_ANSWER == false ]]; do
+    read -p " (YES/NO) : " ANSWER
+    ANSWER_LOWER=$(echo "$ANSWER" | tr '[:upper:]' '[:lower:]')
+        if [[ "$ANSWER_LOWER" == "yes" ]]; then
 echo "Script Starts in 3 seconds"
 sleep 1
 echo "2"
@@ -78,11 +84,32 @@ sleep 1
 echo
 echo -e " \e[1;32mCardano Node Version :\e[0m"
 echo
-cardano-node version
+CARDANO_NODE=$(cardano-node version)
+NODE_VERSION=$(echo $CARDANO_NODE | grep -o "cardano-node [0-9.]*" | awk '{print $2}')
+LATEST_VERSION=$(curl -s https://api.github.com/repos/input-output-hk/cardano-node/releases/latest | jq -r .tag_name)
+if [ $NODE_VERSION = $LATEST_VERSION ] ; then
+    echo -e " [\e[1;32mOK\e[0m] The latest Cardano Node version is installed"
+    echo " Cardano Node version :   "$NODE_VERSION
+else 
+    echo -e " [\e[1;33mWARNING\e[0m] The latest Cardano Node version is not installed"
+    echo " Current version :    "$NODE_VERSION
+    echo " Latest version :     "$LATEST_VERSION
+    sleep 1
+fi
 echo
 echo -e " \e[1;32mCardano Cli Version :\e[0m"
 echo
-cardano-cli version
+CARDANO_CLI=$(cardano-cli version)
+CLI_VERSION=$(echo $CARDANO_CLI | grep -o "cardano-cli [0-9.]*" | awk '{print $2}')
+if [ $CLI_VERSION = $LATEST_VERSION ] ; then
+    echo -e " [\e[1;32mOK\e[0m] The latest Cardano Cli version is installed"
+    echo " Cardano Cli version :   "$CLI_VERSION
+else 
+    echo -e " [\e[1;33mWARNING\e[0m] The latest Cardano Cli version is not installed"
+    echo " Current version :    "$CLI_VERSION
+    echo " Latest version :     "$LATEST_VERSION
+    sleep 1
+fi
 echo
 SERVICE="/etc/systemd/system/cardano-node.service"
 if [ -f "$SERVICE" ] ; then
@@ -788,4 +815,368 @@ echo
 echo "Executed on :"
 date
 echo
+VALID_ANSWER=true
+
+####################################### NOT COINCASHEW #######################################
+
+elif [[ "$ANSWER_LOWER" == "no" ]]; then
+echo
+echo -e "\e[1;33mSCRIPT WILL ONLY DO SECURITY CHECKS\e[0m"
+echo
+echo "Starting in 3 seconds"
+sleep 1
+echo "2"
+sleep 1
+echo "1"
+sleep 1
+START=$(date +%s)
+
+####################################### SYSTEM AND SECURITY CHECK #######################################
+
+echo
+echo "#########################################################################"
+echo
+echo -e "\e[0;33m 1. SSHD CONFIG CHECK/////// \e[0m"
+sleep 1
+echo
+SSHTEST=$(grep -i "Port" /etc/ssh/sshd_config | grep -v "#")
+    if [ $(echo $SSHTEST | awk '{print $2}') == 22 ]; then
+        echo -e " [\e[1;31mKO\e[0m] SSH port should be different to 22"
+    else
+        echo -e " [\e[1;32mOK\e[0m] SSH "$SSHTEST
+    fi
+
+SSHTEST=$(grep -i "PasswordAuthentication no" /etc/ssh/sshd_config | grep -v "#")
+    if [ -z "$SSHTEST" ]; then
+        echo -e " [\e[1;31mKO\e[0m] PasswordAuthentication should be set to 'no'"
+    else
+        echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
+    fi
+
+SSHTEST=$(grep -i "PermitRootLogin prohibit-password" /etc/ssh/sshd_config | grep -v "#")
+    if [ -z "$SSHTEST" ]; then
+        echo -e " [\e[1;31mKO\e[0m] PermitRootLogin should be set to 'prohibit-password'"
+    else
+        echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
+    fi
+
+SSHTEST=$(grep -i "PermitEmptyPasswords no" /etc/ssh/sshd_config | grep -v "#")
+    if [ -z "$SSHTEST" ]; then
+        echo -e " [\e[1;31mKO\e[0m] PermitEmptyPasswords should be set to 'no'"
+    else
+        echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
+    fi
+
+SSHTEST=$(grep -i "X11Forwarding no" /etc/ssh/sshd_config | grep -v "#")
+    if [ -z "$SSHTEST" ]; then
+        echo -e " [\e[1;31mKO\e[0m] X11Forwarding should be set to 'no'"
+    else
+        echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
+    fi
+
+SSHTEST=$(grep -i "TCPKeepAlive no" /etc/ssh/sshd_config | grep -v "#")
+    if [ -z "$SSHTEST" ]; then
+        echo -e " [\e[1;31mKO\e[0m] TCPKeepAlive should be set to 'no'"
+    else
+        echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
+    fi
+
+SSHTEST=$(grep -i "Compression no" /etc/ssh/sshd_config | grep -v "#")
+    if [ -z "$SSHTEST" ]; then
+        echo -e " [\e[1;31mKO\e[0m] Compression should be set to 'no'"
+    else
+        echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
+    fi
+
+SSHTEST=$(grep -i "AllowAgentForwarding no" /etc/ssh/sshd_config | grep -v "#")
+    if [ -z "$SSHTEST" ]; then
+        echo -e " [\e[1;31mKO\e[0m] AllowAgentForwarding should be set to 'no'"
+    else
+        echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
+    fi
+
+SSHTEST=$(grep -i "AllowTcpForwarding no" /etc/ssh/sshd_config | grep -v "#")
+    if [ -z "$SSHTEST" ]; then
+        echo -e " [\e[1;31mKO\e[0m] AllowTcpForwarding should be set to 'no'"
+    else
+        echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
+    fi
+
+SSHTEST=$(grep -i "KbdInteractiveAuthentication no" /etc/ssh/sshd_config | grep -v "#")
+    if [ -z "$SSHTEST" ]; then
+        echo -e " [\e[1;31mKO\e[0m] KbdInteractiveAuthentication should be set to 'no' (unless using a 2FA method)"
+    else
+        echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
+    fi
+echo
+echo "#########################################################################"
+echo
+echo -e "\e[0;33m 2. SERVICES CHECK/////// \e[0m"
+echo
+sleep 1
+    if [ $(systemctl show -p SubState --value cardano-node) == "running" ]; then
+        echo -e " [\e[1;32mOK\e[0m] Service cardano-node is running"
+    else
+        echo -e " [\e[1;31mKO\e[0m] Service cardano-node is not running. Check your service status"
+    fi
+    if [ $(systemctl show -p SubState --value chrony) == "running" ]; then
+        echo -e " [\e[1;32mOK\e[0m] Service chrony (ntp) is running"
+    else
+        echo -e " [\e[1;31mKO\e[0m] Service chrony (ntp) not running. Make sure you have a NTP sync service"
+    fi
+    if [ $(systemctl is-active ufw) == "active" ]; then
+        echo -e " [\e[1;32mOK\e[0m] Service ufw (firewall) is active"
+    else
+        echo -e " [\e[1;31mKO\e[0m] Service ufw (firewall) is not active. Make sure you have a proper firewalling system up"
+    fi
+    if [ $(systemctl show -p SubState --value unattended-upgrades) == "running" ]; then
+        echo -e " [\e[1;32mOK\e[0m] Service unattended-upgrades is running"
+    else
+        echo -e " [\e[1;31mKO\e[0m] Service unattended-upgrades is not running. You should setup automatic security updates"
+    fi
+    if [ $(systemctl show -p SubState --value fail2ban) == "running" ]; then
+        echo -e " [\e[1;32mOK\e[0m] Service fail2ban is running"
+    else
+        echo -e " [\e[1;31mKO\e[0m] Service fail2ban is not running. You should setup fail2ban to harden access to your server"
+    fi
+echo
+echo "#########################################################################"
+echo
+echo -e "\e[0;33m 3. NULL PASSWORDS CHECK/////// \e[0m"
+echo
+sleep 1
+USERS="$(cut -d: -f 1 /etc/passwd)"
+for x in $USERS
+do
+    NULL="$(passwd -S $x | grep 'NP')"
+    if [[ ! -z $NULL ]] ; then
+        echo $NULL
+        PASSWDNULL="DETECTED"
+    fi
+done
+if [[ -z $PASSWDNULL ]] ; then
+    echo -e " [\e[1;32mOK\e[0m] No null password detected"
+else
+    echo -e " [\e[1;33mWARNING\e[0m] null password detected"
+fi
+echo
+echo "#########################################################################"
+echo
+echo -e "\e[0;33m 4. FIREWALLING CHECK/////// \e[0m"
+echo
+sleep 1
+echo -e "============ \e[1;33m iptables rules\e[0m =============="
+echo ""
+
+iptables-save | awk '/^-A/ && ($0 ~ /user-input/ || $0 ~ /f2b/ || $0 ~ /INPUT -p/) {print}'
+
+echo ""
+echo "=========================================="
+echo
+echo " --> This iptables extract includes every rules that have been manually added with UFW, or by Fail2ban"
+echo
+echo
+echo "#########################################################################"
+echo
+echo -e "\e[0;33m 5. /etc/sysctl.conf HARDENING/////// \e[0m"
+echo
+sleep 1
+echo -e " \e[0;33m### Avoid smurf attacks\e[0m"
+echo
+expected_value="1"
+if grep -qE "^net.ipv4.icmp_echo_ignore_broadcasts\s*=\s*$expected_value" /etc/sysctl.conf ; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.icmp_echo_ignore_broadcasts = 1"
+else
+    if grep -qE "^net.ipv4.icmp_echo_ignore_broadcasts" /etc/sysctl.conf ; then
+        current_value=$(grep -E "^net.ipv4.icmp_echo_ignore_broadcasts" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.icmp_echo_ignore_broadcasts = "$current_value " Expected value : "$expected_value
+    else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.icmp_echo_ignore_broadcasts = 1"
+    fi
+fi
+sleep 1
+echo
+echo -e " \e[0;33m### Bad ICMP error messages protection\e[0m"
+echo
+expected_value="1"
+if grep -qE "^net.ipv4.icmp_ignore_bogus_error_responses\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.icmp_ignore_bogus_error_responses = 1"
+else
+    if grep -qE "^net.ipv4.icmp_ignore_bogus_error_responses" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.icmp_ignore_bogus_error_responses" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.icmp_ignore_bogus_error_responses = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.icmp_ignore_bogus_error_responses = 1"
+    fi
+fi
+sleep 1
+echo
+echo -e " \e[0;33m### SYN flood attack protection\e[0m"
+echo
+expected_value="1"
+if grep -qE "^net.ipv4.tcp_syncookies\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.tcp_syncookies = 1"
+else
+    if grep -qE "^net.ipv4.tcp_syncookies" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.tcp_syncookies" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.tcp_syncookies = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.tcp_syncookies = 1"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Disable Redirects\e[0m"
+echo
+expected_value="0"
+if grep -qE "^net.ipv4.conf.all.accept_redirects\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.all.accept_redirects = 0"
+else
+    if grep -qE "^net.ipv4.conf.all.accept_redirects" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.all.accept_redirects" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.all.accept_redirects = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.all.accept_redirects = 0"
+    fi
+fi
+if grep -qE "^net.ipv4.conf.default.accept_redirects\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.default.accept_redirects = 0"
+else
+    if grep -qE "^net.ipv4.conf.default.accept_redirects" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.default.accept_redirects" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.default.accept_redirects = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.default.accept_redirects = 0"
+    fi
+fi
+if grep -qE "^net.ipv4.conf.all.secure_redirects\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.all.secure_redirects = 0"
+else
+    if grep -qE "^net.ipv4.conf.all.secure_redirects" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.all.secure_redirects" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.all.secure_redirects = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.all.secure_redirects = 0"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Disable packet forwarding\e[0m"
+echo
+expected_value="0"
+if grep -qE "^net.ipv4.ip_forward\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.ip_forward = 0"
+else
+    if grep -qE "^net.ipv4.ip_forward" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.ip_forward" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.ip_forward = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.ip_forward = 0"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Synflood protection\e[0m"
+echo
+expected_value="5"
+if grep -qE "^net.ipv4.tcp_synack_retries\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.tcp_synack_retries = 5"
+else
+    if grep -qE "^net.ipv4.tcp_synack_retries" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.tcp_synack_retries" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.tcp_synack_retries = "$current_value " A fine value would be : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.tcp_synack_retries = 5"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Refuse source routed packets\e[0m"
+echo
+expected_value="0"
+if grep -qE "^net.ipv4.conf.all.accept_source_route\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.all.accept_source_route = 0"
+else
+    if grep -qE "^net.ipv4.conf.all.accept_source_route" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.all.accept_source_route" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.all.accept_source_route = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.all.accept_source_route = 0"
+    fi
+fi
+if grep -qE "^net.ipv4.conf.default.accept_source_route\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.default.accept_source_route = 0"
+else
+    if grep -qE "^net.ipv4.conf.default.accept_source_route" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.default.accept_source_route" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.default.accept_source_route = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.default.accept_source_route = 0"
+    fi
+fi
+sleep 1
+echo
+echo -e " \e[0;33m### Log spoofed, source routed, and redirect packets\e[0m"
+echo
+expected_value="1"
+if grep -qE "^net.ipv4.conf.all.log_martians\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.all.log_martians = 1"
+else
+    if grep -qE "^net.ipv4.conf.all.log_martians" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.all.log_martians" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.all.log_martians = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.all.log_martians = 1"
+    fi
+fi
+if grep -qE "^net.ipv4.conf.default.log_martians\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.conf.default.log_martians = 1"
+else
+    if grep -qE "^net.ipv4.conf.default.log_martians" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.conf.default.log_martians" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.conf.default.log_martians = "$current_value " Expected value : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.conf.default.log_martians = 1"
+    fi
+fi
+
+echo
+echo -e " \e[0;33m### Increase TCP max buffer size\e[0m"
+echo
+expected_value="4096 87380 8388608"
+if grep -qE "^net.ipv4.tcp_rmem\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.tcp_rmem = 4096 87380 8388608"
+else
+    if grep -qE "^net.ipv4.tcp_rmem" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.tcp_rmem" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.tcp_rmem = "$current_value " A fine value would be : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.tcp_rmem = "$expected_value
+    fi
+fi
+if grep -qE "^net.ipv4.tcp_wmem\s*=\s*$expected_value" /etc/sysctl.conf; then
+    echo -e " [\033[1;32mOK\033[0m] net.ipv4.tcp_wmem = 4096 87380 8388608"
+else
+    if grep -qE "^net.ipv4.tcp_wmem" /etc/sysctl.conf; then
+        current_value=$(grep -E "^net.ipv4.tcp_wmem" /etc/sysctl.conf | awk -F= '{print $2}' | tr -d '[:space:]')
+        echo -e " [\033[1;33mWARNING\033[0m] net.ipv4.tcp_wmem = "$current_value " A fine value would be : "$expected_value
+else
+        echo -e " [\033[0;31mKO\033[0m] Not found. You should add : net.ipv4.tcp_wmem = "$expected_value
+    fi
+fi
+echo
+echo "#########################################################################"
+echo
+END=$(date +%s)
+DIFF=$(( $END - $START ))
+echo "Script completed in" $DIFF "seconds"
+echo
+echo "Executed on :"
+date
+echo
+VALID_ANSWER=true
+else
+echo -e " \e[1;31mInvalid answer. Please enter YES or NO\e[0m"
+fi
+done
 exit 0;
