@@ -1,9 +1,11 @@
 # Cardano-Audit-Coincashew
 
-These script audits Cardano Node setup with Coincashew guide.
+These script audits Cardano Node setup with Coincashew guide. It can be run on any Cardano setup, but will only perfom security checks.
 
 It runs the following checks :
 
+- Cardano-node latest version verification
+- Cardano-cli latest version verification
 - Environment Variables
 - Systemd cardano-node file verification and parsing
 - Cardano startup script verification and parsing
@@ -30,6 +32,7 @@ It runs the following checks :
 # Pre-Requisites :
 
 Cardano Node setup with Coincashew Guide : https://www.coincashew.com/coins/overview-ada/guide-how-to-build-a-haskell-stakepool-node)
+If You are not using a Coincashew setup, you can still run the script : it will perform security audit checks
 
 # How to use
 
@@ -40,6 +43,13 @@ sudo -E ./audit-coincashew.sh
 ```
 
 # Changelog
+
+v3.0.0
+
+- Added Cardano Node latest version verification
+- Added Cardano Cli latest version verification
+- Added option for non coincashew users
+- Several code improvments
 
 v2.0.1
 
