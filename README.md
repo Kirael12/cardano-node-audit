@@ -49,7 +49,7 @@ v3.0.0
 - Added Cardano Node latest version verification
 - Added Cardano Cli latest version verification
 - Added option for non coincashew users
-- Several code improvments
+- Several code improvements
 
 v2.0.1
 
