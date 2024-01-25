@@ -44,6 +44,10 @@ sudo -E ./audit-coincashew.sh
 
 # Changelog
 
+v4.0.0
+
+- Updated new Cardano github path
+
 v3.0.0
 
 - Added Cardano Node latest version verification
