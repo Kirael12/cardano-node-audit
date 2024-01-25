@@ -21,7 +21,7 @@ echo " |  _| (_) | |    | (_| (_) | | | | | (_| (_| \__ \ | | |  __/\ V  V / ";
 echo " |_|  \___/|_|     \___\___/|_|_| |_|\___\__,_|___/_| |_|\___| \_/\_/  ";
 echo "                                                                       ";
 echo
-echo "v3.0.0" 
+echo "v4.0.0" 
 echo "by FRADA stake pool"
 echo
 echo "#########################################################################"
@@ -86,7 +86,7 @@ echo -e " \e[1;32mCardano Node Version :\e[0m"
 echo
 CARDANO_NODE=$(cardano-node version)
 NODE_VERSION=$(echo $CARDANO_NODE | grep -o "cardano-node [0-9.]*" | awk '{print $2}')
-LATEST_VERSION=$(curl -s https://api.github.com/repos/input-output-hk/cardano-node/releases/latest | jq -r .tag_name)
+LATEST_VERSION=$(curl -s https://api.github.com/repositories/188299874/releases/latest | jq -r .tag_name)
 if [ $NODE_VERSION = $LATEST_VERSION ] ; then
     echo -e " [\e[1;32mOK\e[0m] The latest Cardano Node version is installed"
     echo " Cardano Node version :   "$NODE_VERSION
