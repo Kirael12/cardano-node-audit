@@ -21,7 +21,7 @@ echo " |  _| (_) | |    | (_| (_) | | | | | (_| (_| \__ \ | | |  __/\ V  V / ";
 echo " |_|  \___/|_|     \___\___/|_|_| |_|\___\__,_|___/_| |_|\___| \_/\_/  ";
 echo "                                                                       ";
 echo
-echo "v4.0.0" 
+echo "v5.0.0" 
 echo "by FRADA stake pool"
 echo
 echo "#########################################################################"
@@ -37,7 +37,7 @@ echo "Tested for Ubuntu 22.04.2 LTS"
 echo
 echo "#########################################################################"
 echo
-echo "Is it a Coincashew Cardano node setup ? y/n"
+echo "Is it a Coincashew Cardano node setup ?"
 VALID_ANSWER=false
 while [[ $VALID_ANSWER == false ]]; do
     read -p " (YES/NO) : " ANSWER
@@ -97,20 +97,20 @@ else
     sleep 1
 fi
 echo
-echo -e " \e[1;32mCardano Cli Version :\e[0m"
-echo
-CARDANO_CLI=$(cardano-cli version)
-CLI_VERSION=$(echo $CARDANO_CLI | grep -o "cardano-cli [0-9.]*" | awk '{print $2}')
-if [ $CLI_VERSION = $LATEST_VERSION ] ; then
-    echo -e " [\e[1;32mOK\e[0m] The latest Cardano Cli version is installed"
-    echo " Cardano Cli version :   "$CLI_VERSION
-else 
-    echo -e " [\e[1;33mWARNING\e[0m] The latest Cardano Cli version is not installed"
-    echo " Current version :    "$CLI_VERSION
-    echo " Latest version :     "$LATEST_VERSION
-    sleep 1
-fi
-echo
+#echo -e " \e[1;32mCardano Cli Version :\e[0m"
+#echo
+#CARDANO_CLI=$(cardano-cli version)
+#CLI_VERSION=$(echo $CARDANO_CLI | grep -o "cardano-cli [0-9.]*" | awk '{print $2}')
+#if [ $CLI_VERSION = $LATEST_VERSION ] ; then
+#    echo -e " [\e[1;32mOK\e[0m] The latest Cardano Cli version is installed"
+#    echo " Cardano Cli version :   "$CLI_VERSION
+#else 
+#    echo -e " [\e[1;33mWARNING\e[0m] The latest Cardano Cli version is not installed"
+#    echo " Current version :    "$CLI_VERSION
+#    echo " Latest version :     "$LATEST_VERSION
+#    sleep 1
+#fi
+#echo
 SERVICE="/etc/systemd/system/cardano-node.service"
 if [ -f "$SERVICE" ] ; then
     echo -e " [\e[1;32mOK\e[0m] Systemd service file Cardano found :    "$SERVICE
@@ -219,13 +219,15 @@ else
     echo
     sleep 1
     if [ -f "$NODE_HOME/topology.json" ] ; then
-        if [ "$(grep -i "relays-new.cardano-mainnet.iohk.io" $NODE_HOME/topology.json | grep -v "#")" == "" ] && [ -f "$NODE_HOME/node.cert" ] ; then
+
+        if grep -qi "relays-new.cardano-mainnet.iohk.io\|backbone.cardano.iog.io\|backbone.mainnet.emurgornd.com\|backbone.cardano-mainnet.iohk.io" "$NODE_HOME/topology.json" && [ -f "$NODE_HOME/node.cert" ]; then
             echo -e " YOUR NODE SEEMS TO BE RUNNING AS A \e[1;32mBLOCK PRODUCER\e[0m"
-            echo -e " (topology.json found without 'relays-new.cardano-mainnet.iohk.io' inside + and node.cert file found)"
+            echo -e " (topology.json found without public relays + node.cert file found)"
             NODEMODE="BP"
         else
-            echo -e " YOUR NODE SEEMS TO BE RUNNING AS A \e[1;32mRELAY\e[0m"
-            NODEMODE="RELAY"
+            echo -e " YOUR NODE SEEMS TO BE RUNNING AS A \e[1;31mRELAY\e[0m"
+            echo -e " (topology.json contains public relays or node.cert file not found)"
+            NODEMODE="Relay"
         fi
     else
         echo -e " [\e[1;31mKO\e[0m] Still unable to determine if your node is a Relay or a Block Producer"
@@ -254,18 +256,31 @@ if [ "$NODEMODE" == "BP" ] ; then
                 else
                     echo -e " [\e[1;32mOK\e[0m] localRoots peer list :"
                     echo
-                    awk -v RS="publicRoots" '/localRoots/ {print $0}' $TOPOLOGY | awk '/address/ {print $0} '
+                    EXTRACT=$(awk '/"localRoots"/ {p=1; next} p && /]/ {exit} p' $TOPOLOGY)
+                    LOCALROOT_ADDR=$(echo "$EXTRACT" | grep -o '"address": "[^"]*' | awk -F '"address": "' '{print $2}')
+                    LOCALROOT_PORTS=$(echo "$EXTRACT" | grep -o '"port": [0-9]*' | awk -F '"port": ' '{print $2}')
+                    paste -d ' ' <(echo "$LOCALROOT_ADDR") <(echo "$LOCALROOT_PORTS")
                     echo
                 fi
                 if [[ "$(awk -F ":" '/"publicRoots"/ {print $2}' $TOPOLOGY)" == *"[]"* ]] ; then
-                echo -e " [\e[1;32mOK\e[0m] PublicRoots is empty (good practice)"
-                    if [[ "$(awk -F ":" '/"advertise"/ {print $2}' $TOPOLOGY)" == *"true"* ]] ; then
+                    echo -e " [\e[1;32mOK\e[0m] PublicRoots is empty (good practice)"
+                else
+                    echo -e " [\e[1;31mKO\e[0m] You should not have any PublicRoots server on your Block Producer. Leave it empty []"
+                fi
+                if [[ "$(awk -F ":" '/"advertise"/ {print $2}' $TOPOLOGY)" == *"true"* ]] ; then
                     echo -e " [\e[1;31mKO\e[0m] You should not activate the advertise option on your Block Producer. Turn it to 'false'"
-                    else
+                else
                     echo -e " [\e[1;32mOK\e[0m] Advertise option set to false (good practice) "
+                fi
+                if grep -q '"useLedgerAfterSlot":' $TOPOLOGY; then
+                    USELEDGER_VALUE=$(grep -oP '"useLedgerAfterSlot": \K[0-9]+' $TOPOLOGY)
+                    if [ "$USELEDGER_VALUE" == "-1" ]; then
+                        echo -e " [\e[1;32mOK\e[0m] useLedgerAfterSlot option set to -1 "
+                    else 
+                        echo -e " [\e[1;31mKO\e[0m] useLedgerAfterSlot should be set to -1 on your Block Producer"
                     fi
                 else
-                echo -e " [\e[1;31mKO\e[0m] You should not have any PublicRoots server on your Block Producer. Leave it empty []"
+                    echo -e " [\e[1;31mKO\e[0m] useLedgerAfterSlot absent from your topology file"
                 fi
             else
             echo -e " TOPOLOGY MODE : Your node seems to be running \e[1;32mwithout P2P\e[0m"   
@@ -384,23 +399,56 @@ elif [ "$NODEMODE" == "RELAY" ] ; then
                 else
                     echo -e " [\e[1;32mOK\e[0m] localRoots peer list :"
                     echo
-                    awk -v RS="publicRoots" '/localRoots/ {print $0}' $TOPOLOGY | awk '/address/ {print $0} '
+                    EXTRACT=$(awk '/"localRoots"/ {p=1; next} p && /]/ {exit} p' $TOPOLOGY)
+                    LOCALROOT_ADDR=$(echo "$EXTRACT" | grep -o '"address": "[^"]*' | awk -F '"address": "' '{print $2}')
+                    LOCALROOT_PORTS=$(echo "$EXTRACT" | grep -o '"port": [0-9]*' | awk -F '"port": ' '{print $2}')
+                    paste -d ' ' <(echo "$LOCALROOT_ADDR") <(echo "$LOCALROOT_PORTS")
                     echo
                 fi
-                if [[ "$(awk -F ":" '/"publicRoots"/ {print $2}' $TOPOLOGY)" == *"[]"* ]] ; then
-                    echo -e " [\e[1;31mKO\e[0m] publicRoots block seems empty. Your Relay need to advertise to a Public Root"
+                if grep -q '"bootstrapPeers"' "$TOPOLOGY" && [[ "$(awk -F ':' '/"bootstrapPeers"/ {print $2}' "$TOPOLOGY")" != *"[ ]"* ]]; then
+                    echo -e " [\e[1;32mOK\e[0m] Your relay is running in Bootstrap Mode"
+                    echo -e " [\e[1;32mOK\e[0m] Boostrap peer list :"
+                    echo
+                    BOOTSTRAPBLOCK=$(awk '/"bootstrapPeers"/,/\],/' "$TOPOLOGY")
+                    BOOTSTRAPPEERS=$(echo "$BOOTSTRAPBLOCK" | grep -o '"address": "[^"]*' | grep -o '[^"]*$' | paste -d ' ' - <(echo "$BOOTSTRAPBLOCK" | grep -o '"port": [0-9]*' | grep -o '[0-9]*'))
+                    echo "$BOOTSTRAPPEERS"
+                    echo
                 else
-                    PUBLICROOT=$(awk '/publicRoots/ {n = 10} n {print prev;} {prev = $0} END {if (n) print}' $TOPOLOGY)
-                        if [[ "$PUBLICROOT" == *'"relays-new.cardano-mainnet.iohk.io"'* ]] ; then
-                            echo -e " [\e[1;32mOK\e[0m] PublicRoots is set to relays-new.cardano-mainnet.iohk.io (good practice) "
-                        else
-                            echo -e " [\e[1;31mKO\e[0m] relays-new.cardano-mainnet.iohk.io seems to be missing in your PublicRoots section"
+                    echo -e " [\e[1;33mWARNING\e[0m] Bootstrap section not found or empty. Checking publicRoot section..."
+                    if [[ "$(awk -F ":" '/"publicRoots"/ {print $2}' $TOPOLOGY)" == *"[]"* ]] ; then
+                        echo -e " [\e[1;31mKO\e[0m] publicRoots block seems empty. Your Relay need to advertise to a Public Root or use Bootstap Mode"
+                    else
+                        PUBLICROOT=$(awk '/publicRoots/ {n = 20} n {print prev;} {prev = $0} END {if (n) print}' $TOPOLOGY)
+                        REQ=("backbone.cardano-mainnet.iohk.io" "backbone.cardano.iog.io" "backbone.mainnet.emurgornd.com")
+                        ALLREQ=1
+                        for string in "${REQ[@]}"; do
+                            if [[ ! "$PUBLICROOT" == *"$string"* ]]; then
+                                echo -e " [\e[1;33mWARNING\e[0m] Missing required Public Root: $string"
+                                ALLREQ=0
+                            fi
+                        done
+                        if [[ "$ALLREQ" = 1 ]]; then
+                            echo -e " [\e[1;32mOK\e[0m] All required PublicRoots found"
                         fi
+                        if [[ "$PUBLICROOT" == *'relays-new.cardano-mainnet.iohk.io'* ]]; then
+                            echo -e " [\e[1;33mWARNING\e[0m] relays-new.cardano-mainnet.iohk.io found in PublicRoots. It is deprecated."
+                        fi
+                    fi
+                    if [[ "$PUBLICROOT" == *"advertise"* ]] && [[ "$PUBLICROOT" == *"true"* ]] ; then
+                        echo -e " [\e[1;32mOK\e[0m] Advertise is set to 'true'"
+                    else
+                        echo -e " [\e[1;31mKO\e[0m] Advertise seems to be set to 'false'. You have to set it to 'true' on your Relay"
+                    fi
                 fi
-                if [[ "$PUBLICROOT" == *"advertise"* ]] && [[ "$PUBLICROOT" == *"true"* ]] ; then
-                    echo -e " [\e[1;32mOK\e[0m] Advertise is set to 'true'"
+                if grep -q '"useLedgerAfterSlot":' $TOPOLOGY; then
+                    USELEDGER_VALUE=$(grep -oP '"useLedgerAfterSlot": \K[0-9]+' $TOPOLOGY)
+                    if [ "$USELEDGER_VALUE" -ge 0 ]; then
+                        echo -e " [\e[1;32mOK\e[0m] useLedgerAfterSlot is greater or equal to 0 "
+                    else
+                        echo -e " [\e[1;31mKO\e[0m] useLedgerAfterSlot must be set to 0 or more on your Relay"
+                    fi
                 else
-                    echo -e " [\e[1;31mKO\e[0m] Advertise seems to be set to 'false'. You have to set it to 'true' on your Relay"
+                    echo -e " [\e[1;31mKO\e[0m] useLedgerAfterSlot absent from your topology file"
                 fi
         else
             echo -e " TOPOLOGY MODE : Your node seems to be running \e[1;32mwithout P2P\e[0m"
