@@ -44,6 +44,13 @@ sudo -E ./audit-coincashew.sh
 
 # Changelog
 
+v5.0.0
+
+- Added new Cardano P2P checks for relays
+- Added new Cardano P2P checks for block producer
+- Added topology bootstrap check
+- Several code improvements
+
 v4.0.0
 
 - Updated new Cardano github path
