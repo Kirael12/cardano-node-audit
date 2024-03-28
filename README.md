@@ -5,12 +5,12 @@ These script audits Cardano Node setup with Coincashew guide. It can be run on a
 It runs the following checks :
 
 - Cardano-node latest version verification
-- Cardano-cli latest version verification
+- Cardano new P2P bootstrap check
 - Environment Variables
 - Systemd cardano-node file verification and parsing
 - Cardano startup script verification and parsing
 - Node operation mode (Block Producer ? Relay ?)
-- Topology mode (p2p enabled ?)
+- Topology mode (p2p enabled)
 - Topology configuration
 - Keys
 - SSHD hardening
