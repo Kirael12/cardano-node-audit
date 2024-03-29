@@ -1,6 +1,7 @@
 # Cardano-Audit-Coincashew
 
-These script audits Cardano Node setup with Coincashew guide. It can be run on any Cardano setup, but will only perfom security checks.
+This script audits Cardano Node setup with Coincashew guide. 
+It can be run on any non-Coincashew Cardano setup, but it will only perfom security checks.
 
 It runs the following checks :
 
@@ -36,7 +37,7 @@ If You are not using a Coincashew setup, you can still run the script : it will 
 
 # How to use
 
-The script must be ran with sudo an -E flag (to include env variables)
+The script must be run with sudo an -E flag (to include env variables)
 
 ```shell
 sudo -E ./audit-coincashew.sh
@@ -44,7 +45,7 @@ sudo -E ./audit-coincashew.sh
 
 # Changelog
 
-v5.0.0
+v5.0.0 (march 2024)
 
 - Added new Cardano P2P checks for relays
 - Added new Cardano P2P checks for block producer
