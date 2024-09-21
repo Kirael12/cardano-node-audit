@@ -46,6 +46,8 @@ It runs the following checks :
 
 # Pre-Requisites :
 
+The script is 100% shell bash. It works on Linux systems.
+
 cardano-node up and running. You can setup a Cardano node with :
 - Coincashew guide : https://www.coincashew.com/coins/overview-ada/guide-how-to-build-a-haskell-stakepool-node)
 - CNODE (Guild-Operators) : https://cardano-community.github.io/guild-operators/
