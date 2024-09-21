@@ -1,3 +1,9 @@
+<p align="center" dir="auto">
+  <a href="https://github.com/Kirael12/Cardano-Node-Audit/releases">
+    <img src="https://img.shields.io/github/v/release/Kirael12/Cardano-Node-Audit?style=for-the-badge" style="max-width: 100%;">
+  </a>
+</p>
+
 # Cardano-Node-Audit
 
 ## Full revamp (v7.0.0 - september 2024)
