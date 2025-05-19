@@ -6,6 +6,14 @@
 
 # Cardano-Node-Audit
 
+## v8.0.0 - may 2025
+
+New features added : 
+
+- Auto-update check
+- Improved ssh configuration files audit
+- Code optimization
+
 ## Full revamp (v7.0.0 - september 2024)
 
 The script has been completely revamped and reworked. It now supports **various** types of Cardano installations :
