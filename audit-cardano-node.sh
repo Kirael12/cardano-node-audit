@@ -2,7 +2,98 @@
 #
 export PATH="$HOME/.local/bin:$PATH"
 
+# VERSION
+
+SCRIPT_NAME="audit-cardano-node.sh"
+CURRENT_VERSION="8.0.0"
+REPO="Kirael12/cardano-node-audit"
+API_URL="https://api.github.com/repos/$REPO/releases/latest"
+
 ############################################ FUNCTIONS #############################################
+
+# Script version check
+update_script_if_needed() {
+# Get the latest version from the GitHub API
+local latest_version
+latest_version=$(curl -s "$API_URL" | grep '"tag_name":' | cut -d '"' -f 4)
+
+if [ "$latest_version" != "$CURRENT_VERSION" ]; then
+    echo
+    echo "A new version ($latest_version) is available."
+    local ANSWER
+    while true; do
+        read -p "Do you want to update the script now? (Y/N): " ANSWER
+        ANSWER=$(echo "$ANSWER" | tr '[:upper:]' '[:lower:]')
+        if [[ "$ANSWER" == "y" || "$ANSWER" == "yes" || "$ANSWER" == "n" || "$ANSWER" == "no" ]]; then
+            break
+        else
+            echo "Please answer Y (yes) or N (no)."
+        fi
+    done
+    echo
+    if [[ "$ANSWER" == "y" || "$ANSWER" == "yes" ]]; then
+        # Get the asset URL (the script)
+        echo -e " \e[1;32m==>\e[0m Fetching asset URL for $SCRIPT_NAME..."
+        local asset_url
+        asset_url=$(curl -s "$API_URL" | grep "browser_download_url" | grep "$SCRIPT_NAME" | cut -d '"' -f 4)
+        echo -e " \e[1;32m==>\e[0m Asset URL: $asset_url"
+        if [ -z "$asset_url" ]; then
+            echo -e " [\e[1;31mERROR:\e[0m] Unable to find the script to download."
+            exit 1
+        fi
+        echo -e " \e[1;32m==>\e[0m Creating temporary file for new script..."
+        # Download the new script to a temp file
+        local tmp_script
+        tmp_script=$(mktemp)
+        if [ ! -f "$tmp_script" ]; then
+            echo -e " [\e[1;31mERROR:\e[0m] Failed to create temporary file."
+            exit 1
+        fi
+        echo -e " \e[1;32m==>\e[0m Downloading new script to $tmp_script..."
+        curl -sL "$asset_url" -o "$tmp_script"
+        if [ $? -ne 0 ] || [ ! -s "$tmp_script" ]; then
+            echo -e " [\e[1;31mERROR:\e[0m] Download failed or file is empty."
+            rm -f "$tmp_script"
+            exit 1
+        fi
+        echo -e " \e[1;32m==>\e[0m Making new script executable..."
+        chmod +x "$tmp_script"
+        if [ $? -ne 0 ]; then
+            echo -e " [\e[1;31mERROR:\e[0m] Failed to make the script executable."
+            rm -f "$tmp_script"
+            exit 1
+        fi
+        # Replace the old script with the new one
+        echo -e " \e[1;32m==>\e[0m Replacing the old script ($0) with the new one..."
+        cp "$tmp_script" "$0"
+        if [ $? -ne 0 ]; then
+            echo -e " [\e[1;31mERROR:\e[0m] Failed to copy new script over the old one."
+            rm -f "$tmp_script"
+            exit 1
+        fi
+        echo -e " \e[1;32m==>\e[0m Removing temporary file..."
+        rm "$tmp_script"
+        # Original sudo user owns the new script
+        if [ -n "$SUDO_USER" ]; then
+            echo -e " \e[1;32m==>\e[0m Changing ownership to $SUDO_USER..."
+            chown "$SUDO_USER":"$SUDO_USER" "$0"
+            if [ $? -ne 0 ]; then
+                echo -e " [\e[1;31mERROR:\e[0m] Failed to change ownership of the script."
+                exit 1
+            fi
+        fi
+        echo
+        echo -e "[\e[1;32mSUCCESS:\e[0m] Script updated."
+        read -p "Press Enter to relaunch the script..."
+        echo " ...Relaunching..."
+        exec "$0" "$@"
+        exit
+    else
+        echo -e "[\e[1;33mWARNING\e[0m] Update cancelled. The script will continue with the current version ($CURRENT_VERSION)."
+        read -p "Press Enter to continue..."
+    fi
+fi
+}
 
 # Check commands
 check_command() {
@@ -15,6 +106,31 @@ capture_output() {
     exec > >(tee -a "$output_file") 2>&1
 }
 
+# Get all sshd config files included
+get_all_sshd_configs() {
+    local main_config="/etc/ssh/sshd_config"
+    local configs=("$main_config")
+    local include_lines
+    include_lines=$(grep -i '^Include ' "$main_config" 2>/dev/null)
+    if [ -n "$include_lines" ]; then
+        while read -r line; do
+            # Récupère le chemin après "Include"
+            local pattern=$(echo "$line" | awk '{print $2}')
+            # Si le chemin est relatif, le rendre relatif au dossier du fichier principal
+            if [[ "$pattern" != /* ]]; then
+                pattern="$(dirname "$main_config")/$pattern"
+            fi
+            # Expansion des wildcards
+            for file in $pattern; do
+                if [ -f "$file" ]; then
+                    configs+=("$file")
+                fi
+            done
+        done <<< "$include_lines"
+    fi
+    echo "${configs[@]}"
+}
+
 # Security checks
 security_checks() {
     echo "#########################################################################"
@@ -22,79 +138,145 @@ security_checks() {
     echo -e "\e[0;33m/////// SSHD CONFIG CHECK /////// \e[0m"
     sleep 1
     echo
-    SSHTEST=$(grep -i "Port" /etc/ssh/sshd_config | grep -v "#")
-    if [ "$(echo $SSHTEST | awk '{print $2}')" == 22 ]; then
-        echo -e " [\e[1;31mKO\e[0m] SSH port should be different to 22"
-    else
-        echo -e " [\e[1;32mOK\e[0m] SSH "$SSHTEST
+    sshd_configs=($(get_all_sshd_configs))
+
+    if [ ${#sshd_configs[@]} -gt 1 ]; then
+        echo -e "\e[1;33m[WARNING]\e[0m Additional SSH configuration files detected:"
+        for cfg in "${sshd_configs[@]}"; do
+            if [ "$cfg" != "/etc/ssh/sshd_config" ]; then
+                echo -e "  - $cfg"
+            fi
+        done
+        echo
+        echo -e "Some SSH configuration may be overridden or extended by these files."
+        echo
     fi
 
-    SSHTEST=$(grep -i "PasswordAuthentication no" /etc/ssh/sshd_config | grep -v "#")
-        if [ -z "$SSHTEST" ]; then
-            echo -e " [\e[1;31mKO\e[0m] PasswordAuthentication should be set to 'no'"
-        else
-            echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
-        fi
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" == "22" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] Port is set to '22' in $cfg (should be different from 22)"
+            else
+                echo -e " [\e[1;32mOK\e[0m] Port is set to '$value' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*Port[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
 
-    SSHTEST=$(grep -i "PermitRootLogin prohibit-password" /etc/ssh/sshd_config | grep -v "#")
-        if [ -z "$SSHTEST" ]; then
-            echo -e " [\e[1;31mKO\e[0m] PermitRootLogin should be set to 'prohibit-password'"
-        else
-            echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
-        fi
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "no" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] PasswordAuthentication is set to '$value' in $cfg (should be 'no')"
+            else
+                echo -e " [\e[1;32mOK\e[0m] PasswordAuthentication is set to 'no' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*PasswordAuthentication[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
 
-    SSHTEST=$(grep -i "PermitEmptyPasswords no" /etc/ssh/sshd_config | grep -v "#")
-        if [ -z "$SSHTEST" ]; then
-            echo -e " [\e[1;31mKO\e[0m] PermitEmptyPasswords should be set to 'no'"
-        else
-            echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
-        fi
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "prohibit-password" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] PermitRootLogin is set to '$value' in $cfg (should be 'prohibit-password')"
+            else
+                echo -e " [\e[1;32mOK\e[0m] PermitRootLogin is set to 'prohibit-password' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*PermitRootLogin[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
 
-    SSHTEST=$(grep -i "X11Forwarding no" /etc/ssh/sshd_config | grep -v "#")
-        if [ -z "$SSHTEST" ]; then
-            echo -e " [\e[1;31mKO\e[0m] X11Forwarding should be set to 'no'"
-        else
-            echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
-        fi
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "no" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] PermitEmptyPasswords is set to '$value' in $cfg (should be 'no')"
+            else
+                echo -e " [\e[1;32mOK\e[0m] PermitEmptyPasswords is set to 'no' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*PermitEmptyPasswords[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
 
-    SSHTEST=$(grep -i "TCPKeepAlive no" /etc/ssh/sshd_config | grep -v "#")
-        if [ -z "$SSHTEST" ]; then
-            echo -e " [\e[1;31mKO\e[0m] TCPKeepAlive should be set to 'no'"
-        else
-            echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
-        fi
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "no" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] X11Forwarding is set to '$value' in $cfg (should be 'no')"
+            else
+                echo -e " [\e[1;32mOK\e[0m] X11Forwarding is set to 'no' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*X11Forwarding[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
 
-    SSHTEST=$(grep -i "Compression no" /etc/ssh/sshd_config | grep -v "#")
-        if [ -z "$SSHTEST" ]; then
-            echo -e " [\e[1;31mKO\e[0m] Compression should be set to 'no'"
-        else
-            echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
-        fi
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "no" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] TCPKeepAlive is set to '$value' in $cfg (should be 'no')"
+            else
+                echo -e " [\e[1;32mOK\e[0m] TCPKeepAlive is set to 'no' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*TCPKeepAlive[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
 
-    SSHTEST=$(grep -i "AllowAgentForwarding no" /etc/ssh/sshd_config | grep -v "#")
-        if [ -z "$SSHTEST" ]; then
-            echo -e " [\e[1;31mKO\e[0m] AllowAgentForwarding should be set to 'no'"
-        else
-            echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
-        fi
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "no" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] Compression is set to '$value' in $cfg (should be 'no')"
+            else
+                echo -e " [\e[1;32mOK\e[0m] Compression is set to 'no' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*Compression[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
 
-    SSHTEST=$(grep -i "AllowTcpForwarding no" /etc/ssh/sshd_config | grep -v "#")
-        if [ -z "$SSHTEST" ]; then
-            echo -e " [\e[1;31mKO\e[0m] AllowTcpForwarding should be set to 'no'"
-        else
-            echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
-        fi
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "no" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] AllowAgentForwarding is set to '$value' in $cfg (should be 'no')"
+            else
+                echo -e " [\e[1;32mOK\e[0m] AllowAgentForwarding is set to 'no' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*AllowAgentForwarding[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
 
-    SSHTEST=$(grep -i "KbdInteractiveAuthentication no" /etc/ssh/sshd_config | grep -v "#")
-        if [ -z "$SSHTEST" ]; then
-            echo -e " [\e[1;31mKO\e[0m] KbdInteractiveAuthentication should be set to 'no' (unless using a 2FA method)"
-        else
-            echo -e " [\e[1;32mOK\e[0m] "$SSHTEST
-        fi
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "no" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] AllowTcpForwarding is set to '$value' in $cfg (should be 'no')"
+            else
+                echo -e " [\e[1;32mOK\e[0m] AllowTcpForwarding is set to 'no' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*AllowTcpForwarding[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
+
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "no" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] AllowTcpForwarding is set to '$value' in $cfg (should be 'no')"
+            else
+                echo -e " [\e[1;32mOK\e[0m] AllowTcpForwarding is set to 'no' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*AllowTcpForwarding[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
+
+    for cfg in "${sshd_configs[@]}"; do
+        while read -r line; do
+            value=$(echo "$line" | awk '{print $2}')
+            if [[ "$value" != "no" ]]; then
+                echo -e " [\e[1;31mKO\e[0m] KbdInteractiveAuthentication is set to '$value' in $cfg (should be 'no', unless using a 2FA method)"
+            else
+                echo -e " [\e[1;32mOK\e[0m] KbdInteractiveAuthentication is set to 'no' in $cfg"
+            fi
+        done < <(grep -i "^[[:space:]]*KbdInteractiveAuthentication[[:space:]]" "$cfg" | grep -v "^[[:space:]]*#")
+    done
+        
     echo
     echo "#########################################################################"
     echo
-    echo -e "\e[0;33m/////// SERVICES CHECK/////// \e[0m"
+    echo -e "\e[0;33m/////// SERVICES CHECK /////// \e[0m"
     echo
     sleep 1
         if [ "$NODETYPE" == "CNODE" ]; then
@@ -368,8 +550,8 @@ check_cardano_node_version() {
     if [ $NODE_VERSION = $LATEST_VERSION ] ; then
         echo -e " [\e[1;32mOK\e[0m] The latest Cardano Node version is installed"
         echo " Cardano Node version :   "$NODE_VERSION
-    elif [ "$MAJOR_VERSION" -le 9 ] && [ "$MINOR_VERSION" -lt 1 ] ; then
-        echo -e " [\e[1;31mKO\e[0m] \e[1;31mThe installed Cardano Node does not meet the minimum version requirements (>= 9.1) "
+    elif [ "$MAJOR_VERSION" -le 10 ] && [ "$MINOR_VERSION" -lt 1 ] ; then
+        echo -e " [\e[1;31mKO\e[0m] \e[1;31mThe installed Cardano Node does not meet the minimum version requirements (>= 10.1) "
         echo -e " \e[1;31mPlease upgrade your Cardano Node to the latest version, as soon as possible ! "
         echo " Current version :    "$NODE_VERSION
         echo " Latest version :     "$LATEST_VERSION
@@ -729,7 +911,7 @@ show_menu() {
         echo " | |__| (_| | | | (_| | (_| | | | | (_) |  / ___ \ |_| | (_| | | |_    ";
         echo "  \____\__,_|_|  \__,_|\__,_|_| |_|\___/  /_/   \_\__,_|\__,_|_|\__|   ";
         echo
-        echo "v7.0.0" 
+        echo "v8.0.0" 
         echo "by FRADA stake pool"
         echo "#########################################################################"
         echo "Audit script for your cardano node installation"
@@ -796,6 +978,9 @@ if ! cardano-node version &>/dev/null; then
     echo "Error : cardano-node is not installed. Please install Cardano."
     exit 1
 fi
+
+# Check for the latest version
+update_script_if_needed "$@"
 
 show_menu
 echo
