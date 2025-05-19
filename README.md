@@ -1,6 +1,6 @@
 <p align="center" dir="auto">
   <a href="https://github.com/Kirael12/Cardano-Node-Audit/releases">
-    <img src="https://img.shields.io/github/v/release/Kirael12/Cardano-Node-Audit?style=for-the-badge" style="max-width: 100%;">
+    <img src="https://img.shields.io/github/v/release/Kirael12/Cardano-Node-Audit?style=for-the-badge" style="max-width: 99%;">
   </a>
 </p>
 
